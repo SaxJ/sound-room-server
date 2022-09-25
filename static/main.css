@@ -1,0 +1,28 @@
+body {
+  background-color: #242424;
+  font-family: "Helvetica";
+  color: white;
+  text-align: center;
+}
+
+#status {
+  text-transform: uppercase;
+  position: absolute;
+  top: 0px;
+  right: 0px;
+}
+
+button {
+  font-size: 100px;
+  background-color: transparent;
+  border-radius: 5px;
+  margin: 8px;
+  flex: 1;
+}
+
+.buttons {
+  display: flex;
+  margin: 0 auto;
+  width: 800px;
+  flex-flow: row wrap;
+}
