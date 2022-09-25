@@ -1,0 +1,8 @@
+[phases.setup]
+cmd = 'stack setup'
+
+[phases.build]
+cmd = 'stack install'
+
+[start]
+cmd = 'stack run'
