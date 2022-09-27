@@ -56,40 +56,49 @@ broadcast room msg allClients = do
   where
     roomClients = [c | c <- allClients, clientRoom c == room]
 
-roomName :: WS.PendingConnection -> Maybe UUID
-roomName pc = let
+roomName_ :: WS.PendingConnection -> String
+roomName_ pc = let
   req = WS.pendingRequest pc
   room = map w2c $ BS.unpack $ WS.requestPath req
   in
-    fromString room
+    [c | c <- room, c /= '/']
+
+roomName :: WS.PendingConnection -> Maybe UUID
+roomName pc = fromString $ roomName_ pc
 
 main :: IO ()
 main = do
   T.putStrLn "Starting server"
   state <- newMVar newServerState
-  WS.runServer "0.0.0.0" 9160 $ application state
+  WS.runServer "127.0.0.1" 9160 $ application state
 
-application :: MVar ServerState -> WS.ServerApp
-application state pending = do
-  conn <- WS.acceptRequest pending
-  let room = roomName pending
-  name <- nextRandom
+connectionOpened :: WS.Connection -> UUID -> MVar ServerState -> UUID -> IO ()
+connectionOpened conn room state name =
   WS.withPingThread conn 30 (return ()) $ do
     msg <- WS.receiveData conn
     case room of
-      Just r | otherwise -> flip finally disconnect $ do
+      _ | otherwise -> flip finally disconnect $ do
         modifyMVar_ state $ \s -> do
           let s' = addClient client s
-          broadcast r msg s'
+          broadcast room msg s'
           return s'
         talk client state
         where
-          client = Client name r conn
+          client = Client name room conn
           disconnect = do
             modifyMVar_ state $ \s ->
               return $ removeClient client s
-      _ -> do
-        WS.sendTextData conn ("No" ::T.Text)
+
+application :: MVar ServerState -> WS.ServerApp
+application state pending = do
+  let room = roomName pending
+  T.putStrLn $ T.pack $ roomName_ pending
+  name <- nextRandom
+  case room of
+    Just r -> do
+      conn <- WS.acceptRequest pending
+      connectionOpened conn r state name
+    _ -> WS.rejectRequest pending "Nope"
 
 talk :: Client -> MVar ServerState -> IO ()
 talk client state = forever $ do
