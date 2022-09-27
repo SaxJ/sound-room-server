@@ -7,6 +7,7 @@ dependencies:
 - websockets
 - uuid
 - text
+- bytestring
 
 # Runnable executable for our application
 executables:

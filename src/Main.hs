@@ -7,11 +7,13 @@ import Control.Concurrent.MVar (MVar)
 import Control.Monad (forM_, forever, when)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import Data.UUID (UUID)
+import Data.UUID (UUID, fromString)
 import Data.UUID.V4 (nextRandom)
 import GHC.IO (finally)
 import qualified Network.WebSockets as WS
 import qualified Text.Printf as T
+import qualified Data.ByteString as BS
+import Data.ByteString.Internal (w2c)
 
 type Client = (UUID, WS.Connection)
 
@@ -21,7 +23,7 @@ validEvents :: [T.Text]
 validEvents = ["cheer", "clap", "cry", "laugh", "woof", "quack", "boo", "wolf", "drum", "lame"]
 
 isValidEvent :: T.Text -> Bool
-isValidEvent msg = any (== msg) validEvents
+isValidEvent msg = msg `elem`  validEvents
 
 newServerState :: ServerState
 newServerState = []
@@ -48,6 +50,13 @@ broadcast :: T.Text -> ServerState -> IO ()
 broadcast msg clients = do
   T.putStrLn $ broadcastLog msg
   forM_ clients (\(_, conn) -> when (isValidEvent msg) $ WS.sendTextData conn msg)
+
+roomName :: WS.PendingConnection -> Maybe UUID
+roomName pc = let
+  req = WS.pendingRequest pc
+  room = map w2c $ BS.unpack $ WS.requestPath req
+  in
+    fromString room
 
 main :: IO ()
 main = do
