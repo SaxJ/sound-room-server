@@ -15,7 +15,11 @@ import qualified Text.Printf as T
 import qualified Data.ByteString as BS
 import Data.ByteString.Internal (w2c)
 
-type Client = (UUID, WS.Connection)
+data Client = Client
+  { clientName :: UUID
+  , clientRoom :: UUID
+  , clientConn :: WS.Connection
+  }
 
 type ServerState = [Client]
 
@@ -32,13 +36,13 @@ numClients :: ServerState -> Int
 numClients = length
 
 clientExists :: Client -> ServerState -> Bool
-clientExists client = any ((== fst client) . fst)
+clientExists client = any ((== clientName client) . clientName)
 
 addClient :: Client -> ServerState -> ServerState
 addClient c cs = if clientExists c cs then cs else c : cs
 
 removeClient :: Client -> ServerState -> ServerState
-removeClient c = filter (\x -> fst x /= fst c)
+removeClient c = filter (\x -> clientName x /= clientName c)
 
 broadcastLog :: T.Text -> T.Text
 broadcastLog m = T.concat [action, m]
@@ -47,9 +51,9 @@ broadcastLog m = T.concat [action, m]
 
 -- send message to all clients
 broadcast :: T.Text -> ServerState -> IO ()
-broadcast msg clients = do
+broadcast msg allClients = do
   T.putStrLn $ broadcastLog msg
-  forM_ clients (\(_, conn) -> when (isValidEvent msg) $ WS.sendTextData conn msg)
+  forM_ allClients (\c -> when (isValidEvent msg) $ WS.sendTextData (clientConn c) msg)
 
 roomName :: WS.PendingConnection -> Maybe UUID
 roomName pc = let
@@ -67,23 +71,26 @@ main = do
 application :: MVar ServerState -> WS.ServerApp
 application state pending = do
   conn <- WS.acceptRequest pending
+  let room = roomName pending
   name <- nextRandom
   WS.withPingThread conn 30 (return ()) $ do
     msg <- WS.receiveData conn
-    case msg of
-      _ | otherwise -> flip finally disconnect $ do
+    case room of
+      Just r | otherwise -> flip finally disconnect $ do
         modifyMVar_ state $ \s -> do
           let s' = addClient client s
           broadcast msg s'
           return s'
         talk client state
         where
-          client = (name, conn)
+          client = Client name r conn
           disconnect = do
             modifyMVar_ state $ \s ->
               return $ removeClient client s
+      _ -> do
+        WS.sendTextData conn ("No" ::T.Text)
 
 talk :: Client -> MVar ServerState -> IO ()
-talk (_, conn) state = forever $ do
-  msg <- WS.receiveData conn
+talk client state = forever $ do
+  msg <- WS.receiveData $ clientConn client
   readMVar state >>= broadcast msg
