@@ -23,7 +23,7 @@ data Client = Client
 type ServerState = [Client]
 
 validEvents :: [T.Text]
-validEvents = ["cheer", "clap", "cry", "laugh", "woof", "quack", "boo", "wolf", "drum", "lame"]
+validEvents = ["astonished", "cheer", "clap", "cry", "laugh", "woof", "quack", "boo", "wolf", "drum", "lame"]
 
 isValidEvent :: T.Text -> Bool
 isValidEvent msg = msg `elem`  validEvents
