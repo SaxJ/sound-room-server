@@ -31,9 +31,6 @@ isValidEvent msg = msg `elem`  validEvents
 newServerState :: ServerState
 newServerState = []
 
-numClients :: ServerState -> Int
-numClients = length
-
 clientExists :: Client -> ServerState -> Bool
 clientExists client = any ((== clientName client) . clientName)
 
