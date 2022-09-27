@@ -11,7 +11,6 @@ import Data.UUID (UUID, fromString)
 import Data.UUID.V4 (nextRandom)
 import GHC.IO (finally)
 import qualified Network.WebSockets as WS
-import qualified Text.Printf as T
 import qualified Data.ByteString as BS
 import Data.ByteString.Internal (w2c)
 
@@ -50,10 +49,12 @@ broadcastLog m = T.concat [action, m]
     action = if isValidEvent m then "Broadcasting: " else "Skipping: "
 
 -- send message to all clients
-broadcast :: T.Text -> ServerState -> IO ()
-broadcast msg allClients = do
+broadcast :: UUID -> T.Text -> ServerState -> IO ()
+broadcast room msg allClients = do
   T.putStrLn $ broadcastLog msg
-  forM_ allClients (\c -> when (isValidEvent msg) $ WS.sendTextData (clientConn c) msg)
+  forM_ roomClients (\c -> when (isValidEvent msg) $ WS.sendTextData (clientConn c) msg)
+  where
+    roomClients = [c | c <- allClients, clientRoom c == room]
 
 roomName :: WS.PendingConnection -> Maybe UUID
 roomName pc = let
@@ -79,7 +80,7 @@ application state pending = do
       Just r | otherwise -> flip finally disconnect $ do
         modifyMVar_ state $ \s -> do
           let s' = addClient client s
-          broadcast msg s'
+          broadcast r msg s'
           return s'
         talk client state
         where
@@ -93,4 +94,4 @@ application state pending = do
 talk :: Client -> MVar ServerState -> IO ()
 talk client state = forever $ do
   msg <- WS.receiveData $ clientConn client
-  readMVar state >>= broadcast msg
+  readMVar state >>= broadcast (clientRoom client) msg
