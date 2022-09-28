@@ -1,0 +1,17 @@
+{
+  "name": "sound-room-server",
+  "version": "1.0.0",
+  "description": "A websocket server",
+  "main": "index.js",
+  "repository": "git@github.com:SaxJ/sound-room-server.git",
+  "author": "Saxon Jensen <saxon.jensen@healthengine.com.au>",
+  "license": "MIT",
+  "dependencies": {
+    "validator": "^13.7.0",
+    "ws": "^8.9.0"
+  },
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  }
+}
