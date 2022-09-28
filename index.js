@@ -11,10 +11,10 @@ wss.on("connection", (ws, req) => {
     }
 
     ws.on(roomName, (data) => {
-        ws.send(data);
+        ws.send(data, { isBinary: false });
     });
 
-    ws.on("message", (data, isBinary) => {
+    ws.on("message", (data) => {
         wss.clients.forEach((client) => {
             if (client.readyState === WebSocket.OPEN) {
                 client.emit(roomName, data);
